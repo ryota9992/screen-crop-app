@@ -11,6 +11,10 @@ import {
   warpPerspective,
 } from '../lib/autoCrop';
 
+// 画面に表示するバージョン。変更をデプロイするたびに上げること。
+// 表示されている版が最新かどうかを、この番号で確認できる。
+const APP_VERSION = 'v1.1.0';
+
 const PREVIEW_MAX_SIDE = 420;
 
 /** 写真1枚ぶんのカード。四隅の調整と回転ができる。 */
@@ -302,7 +306,12 @@ export default function CropPage() {
       <div className="min-h-screen bg-gray-50 py-8 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-800">画面写真の自動切り出し</h1>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold text-gray-800">画面写真の自動切り出し</h1>
+              <span className="text-xs font-mono px-2 py-0.5 rounded bg-gray-200 text-gray-600">
+                {APP_VERSION}
+              </span>
+            </div>
             <p className="text-gray-600 text-sm mt-1">
               スマホの画面を撮った写真から、画面部分だけを自動で検出して
               台形補正・正立回転した画像を作ります。処理はすべてブラウザ内で行われ、
