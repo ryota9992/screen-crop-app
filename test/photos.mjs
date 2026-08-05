@@ -8,6 +8,7 @@ const photos={
   '6407(暗い机)':`${S}/IMG_6407.jpeg`,
   '6681(木の机)':`${S}/IMG_6681.jpeg`,
   '6682(斜めに置いた)':`${S}/IMG_6682.jpeg`,
+  '6706(ホーム画面・白机)':`${S}/IMG_6706.jpeg`,
 };
 const b=await chromium.launch({executablePath: process.env.CHROME_PATH || undefined});
 const p=await b.newPage(); p.on('pageerror',e=>console.log('[err]',e.message));
