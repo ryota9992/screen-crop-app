@@ -13,12 +13,54 @@ import {
 
 // 画面に表示するバージョン。変更をデプロイするたびに上げること。
 // 表示されている版が最新かどうかを、この番号で確認できる。
-const APP_VERSION = 'v1.10.0';
+const APP_VERSION = 'v1.11.0';
 
 const PREVIEW_MAX_SIDE = 420;
 
+
+/** 切り出し結果のファイル名 */
+function croppedName(name) {
+  return name.replace(/\.[^.]+$/, '') + '_crop.jpg';
+}
+
+/**
+ * 画像を保存する。
+ *
+ * iPhone では <a download> だと「ファイル」アプリに入ってしまい、写真アプリには
+ * 入らない。共有シート（Web Share API）に渡すと「画像を保存」で写真アプリに
+ * 入れられるうえ、複数枚をまとめて渡せる。使えない場合は順番にダウンロードする。
+ */
+async function saveImages(files) {
+  if (files.length === 0) return { method: 'none' };
+
+  if (navigator.canShare && navigator.canShare({ files })) {
+    try {
+      await navigator.share({ files });
+      return { method: 'share' };
+    } catch (err) {
+      // 利用者が共有シートを閉じた場合は、そのまま何もしない
+      if (err && err.name === 'AbortError') return { method: 'cancelled' };
+      // 共有できなかった場合はダウンロードに切り替える
+    }
+  }
+
+  for (const file of files) {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // 連続してダウンロードすると取りこぼすブラウザがあるので少し待つ
+    await new Promise((r) => setTimeout(r, 400));
+    URL.revokeObjectURL(url);
+  }
+  return { method: 'download' };
+}
+
 /** 写真1枚ぶんのカード。四隅の調整と回転ができる。 */
-function CropItem({ item, onRemove }) {
+function CropItem({ item, onRemove, onResult }) {
   const { name, sourceCanvas } = item;
   const [quad, setQuad] = useState(item.quad);
   const [rotation, setRotation] = useState(item.rotation);
@@ -49,6 +91,7 @@ function CropItem({ item, onRemove }) {
         resultCanvasRef.current = rotated;
         const blob = await canvasToBlob(rotated);
         if (cancelled) return;
+        onResult(item.id, blob);
         setResultUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev);
           return URL.createObjectURL(blob);
@@ -61,7 +104,7 @@ function CropItem({ item, onRemove }) {
       cancelled = true;
       clearTimeout(id);
     };
-  }, [quad, rotation, sourceCanvas]);
+  }, [quad, rotation, sourceCanvas, item.id, onResult]);
 
   useEffect(() => () => resultUrl && URL.revokeObjectURL(resultUrl), [resultUrl]);
 
@@ -156,12 +199,11 @@ function CropItem({ item, onRemove }) {
     setRotation(autoOrient(warped).rotation);
   };
 
-  const download = () => {
-    if (!resultUrl) return;
-    const a = document.createElement('a');
-    a.href = resultUrl;
-    a.download = name.replace(/\.[^.]+$/, '') + '_crop.jpg';
-    a.click();
+  const download = async () => {
+    const canvas = resultCanvasRef.current;
+    if (!canvas) return;
+    const blob = await canvasToBlob(canvas);
+    await saveImages([new File([blob], croppedName(name), { type: 'image/jpeg' })]);
   };
 
   return (
@@ -241,7 +283,7 @@ function CropItem({ item, onRemove }) {
           disabled={!resultUrl || busy}
           className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40"
         >
-          ダウンロード
+          保存
         </button>
       </div>
     </div>
@@ -253,6 +295,36 @@ export default function CropPage() {
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [savedNote, setSavedNote] = useState(null);
+  // 切り出し結果は写真ごとに保持しておき、まとめて保存できるようにする
+  const resultsRef = useRef({});
+
+  const handleResult = useCallback((id, blob) => {
+    resultsRef.current[id] = blob;
+  }, []);
+
+  const saveAll = async () => {
+    const files = items
+      .map((item) => {
+        const blob = resultsRef.current[item.id];
+        return blob ? new File([blob], croppedName(item.name), { type: 'image/jpeg' }) : null;
+      })
+      .filter(Boolean);
+    if (files.length === 0) return;
+
+    setSaving(true);
+    setSavedNote(null);
+    try {
+      const { method } = await saveImages(files);
+      if (method === 'share') setSavedNote(`${files.length}枚を共有シートに渡しました`);
+      else if (method === 'download') setSavedNote(`${files.length}枚をダウンロードしました`);
+    } catch (err) {
+      setError(`保存に失敗しました: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleFiles = useCallback(async (e) => {
     const files = Array.from(e.target.files || []);
@@ -342,11 +414,40 @@ export default function CropPage() {
             <div className="bg-red-50 text-red-700 text-sm rounded-lg p-3 mb-4">{error}</div>
           )}
 
+          {items.length > 0 && (
+            <div className="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap items-center gap-3">
+              <button
+                onClick={saveAll}
+                disabled={saving}
+                className="px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-40"
+              >
+                {saving ? '保存中…' : `${items.length}枚をまとめて保存`}
+              </button>
+              <button
+                onClick={() => {
+                  resultsRef.current = {};
+                  setItems([]);
+                  setSavedNote(null);
+                }}
+                className="px-3 py-2 rounded bg-gray-100 text-sm hover:bg-gray-200"
+              >
+                すべて消す
+              </button>
+              <p className="text-xs text-gray-500">
+                {savedNote || 'iPhoneでは共有シートが開きます。「画像を保存」を選ぶと写真アプリに入ります'}
+              </p>
+            </div>
+          )}
+
           {items.map((item) => (
             <CropItem
               key={item.id}
               item={item}
-              onRemove={() => setItems((prev) => prev.filter((i) => i.id !== item.id))}
+              onResult={handleResult}
+              onRemove={() => {
+                delete resultsRef.current[item.id];
+                setItems((prev) => prev.filter((i) => i.id !== item.id));
+              }}
             />
           ))}
 
