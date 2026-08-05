@@ -81,6 +81,13 @@ for(const [name,path] of Object.entries(photos)){
       return +(Math.atan((n*sxy-sx*sy)/(n*syy-sy*sy))*180/Math.PI).toFixed(3);
     };
     const tiltVert=measureVertical();
+    // 左右にベゼル（本体の黒い枠）が写り込んでいないか。
+    // ステータスバーの高さでは、画面の内容が幅いっぱいにあるはず。
+    const y0=Math.round(cv.height*0.03), y1=Math.round(cv.height*0.06);
+    const colBright=(x)=>{let s2=0,n=0;for(let y=y0;y<y1;y++){s2+=lum(x,y);n++;}return s2/n;};
+    let bezelLeft=0, bezelRight=0;
+    for(let x=0;x<cv.width*0.2;x++){ if(colBright(x)<70) bezelLeft=x+1; else break; }
+    for(let x=cv.width-1;x>cv.width*0.8;x--){ if(colBright(x)<70) bezelRight=cv.width-x; else break; }
     let tilt=null, used=0;
     if(raw.length>20){
       const med=raw.map(q=>q.y).sort((a,b)=>a-b)[Math.floor(raw.length/2)];
@@ -90,12 +97,12 @@ for(const [name,path] of Object.entries(photos)){
         for(const q of pts){sx+=q.x;sy+=q.y;sxx+=q.x*q.x;sxy+=q.x*q.y;}
         tilt=+(Math.atan((n*sxy-sx*sy)/(n*sxx-sx*sx))*180/Math.PI).toFixed(3);}
     }
-    return {ok:true, ms, ヘッダー下端の傾き:tilt, 下側の傾き:tiltBottom, 縦線の傾き:tiltVert, 測定点:used, 四隅:quad.map(q=>[Math.round(q.x),Math.round(q.y)]),
+    return {ok:true, ms, ヘッダー下端の傾き:tilt, 下側の傾き:tiltBottom, 縦線の傾き:tiltVert, ベゼル左:+(bezelLeft/cv.width*100).toFixed(1), ベゼル右:+(bezelRight/cv.width*100).toFixed(1), 測定点:used, 四隅:quad.map(q=>[Math.round(q.x),Math.round(q.y)]),
       出力:[o.canvas.width,o.canvas.height], 縦横比:+(o.canvas.height/o.canvas.width).toFixed(3), 回転:o.rotation,
       overlay:ov.toDataURL('image/jpeg',0.85), result:o.canvas.toDataURL('image/jpeg',0.88)};
   }, u);
   if(!r.ok){ console.log(name,'検出できず'); continue; }
-  console.log(name, JSON.stringify({縦横比:r.縦横比, 上の傾き:r.ヘッダー下端の傾き, 下の傾き:r.下側の傾き, 縦線:r.縦線の傾き, 回転:r.回転, ms:r.ms}));
+  console.log(name, JSON.stringify({縦横比:r.縦横比, 上の傾き:r.ヘッダー下端の傾き, 下の傾き:r.下側の傾き, 縦線:r.縦線の傾き, ベゼル左右:[r.ベゼル左,r.ベゼル右], 回転:r.回転, ms:r.ms}));
   const f=name.slice(0,4);
   fs.writeFileSync(`${S}/${tag}_${f}_overlay.jpg`,Buffer.from(r.overlay.split(',')[1],'base64'));
   fs.writeFileSync(`${S}/${tag}_${f}_result.jpg`,Buffer.from(r.result.split(',')[1],'base64'));
