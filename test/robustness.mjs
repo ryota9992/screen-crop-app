@@ -4,8 +4,12 @@ const lib=fs.readFileSync(process.argv[2]||'lib/autoCrop.js','utf8').replace(/^e
 const b=await chromium.launch({executablePath: process.env.CHROME_PATH || undefined});
 const p=await b.newPage(); p.on('pageerror',e=>console.log('[err]',e.message));
 await p.setContent('<body></body>'); await p.addScriptTag({content:lib});
-for(const n of ['IMG_6407','IMG_6681','IMG_6682','IMG_6706']){
-  const u='data:image/jpeg;base64,'+fs.readFileSync(`${process.env.TEST_DIR||'./test/data'}/${n}.jpeg`).toString('base64');
+const S=process.env.TEST_DIR||'./test/data';
+const names=['IMG_6407','IMG_6681','IMG_6682','IMG_6706','IMG_7003'].filter(n=>fs.existsSync(`${S}/${n}.jpeg`));
+const skipped=['IMG_6407','IMG_6681','IMG_6682','IMG_6706','IMG_7003'].filter(n=>!names.includes(n));
+if(skipped.length) console.log(`[未実行] ${skipped.join(', ')} が ${S} に無い`);
+for(const n of names){
+  const u='data:image/jpeg;base64,'+fs.readFileSync(`${S}/${n}.jpeg`).toString('base64');
   const r=await p.evaluate(async u=>{
     const img=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=u;});
     const base=imageToCanvas(img);
