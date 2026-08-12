@@ -4,12 +4,17 @@ const S=process.env.TEST_DIR || './test/data'; // 写真・出力先
 const libPath=process.argv[2]||'/home/user/screen-crop-app/lib/autoCrop.js';
 const tag=process.argv[3]||'cur';
 const lib=fs.readFileSync(libPath,'utf8').replace(/^export /gm,'');
-const photos={
+const all={
   '6407(暗い机)':`${S}/IMG_6407.jpeg`,
   '6681(木の机)':`${S}/IMG_6681.jpeg`,
   '6682(斜めに置いた)':`${S}/IMG_6682.jpeg`,
   '6706(ホーム画面・白机)':`${S}/IMG_6706.jpeg`,
+  '7003(水色ケース・暗い机)':`${S}/IMG_7003.jpeg`,
 };
+// 手元に無い写真は飛ばす。ただし何を見ていないかは必ず表に出す。
+const photos=Object.fromEntries(Object.entries(all).filter(([,f])=>fs.existsSync(f)));
+const missing=Object.keys(all).filter(k=>!photos[k]);
+if(missing.length) console.log(`[未実行] ${missing.join(', ')} が ${S} に無い\n`);
 const b=await chromium.launch({executablePath: process.env.CHROME_PATH || undefined});
 const p=await b.newPage(); p.on('pageerror',e=>console.log('[err]',e.message));
 await p.setContent('<body></body>'); await p.addScriptTag({content:lib});

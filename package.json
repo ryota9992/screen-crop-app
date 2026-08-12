@@ -1,15 +1,23 @@
 {
   "name": "screen-crop-app",
-  "version": "1.0.0",
+  "version": "1.14.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "npm run test:orientation && npm run test:synthetic && npm run test:photos && npm run test:robustness",
+    "test:orientation": "node test/orientation.mjs lib/autoCrop.js",
+    "test:synthetic": "node test/synthetic.mjs lib/autoCrop.js",
+    "test:photos": "node test/photos.mjs lib/autoCrop.js current",
+    "test:robustness": "node test/robustness.mjs lib/autoCrop.js"
   },
   "dependencies": {
     "next": "14.0.4",
     "react": "18.2.0",
     "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.62.1"
   }
 }

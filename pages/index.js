@@ -13,7 +13,7 @@ import {
 
 // 画面に表示するバージョン。変更をデプロイするたびに上げること。
 // 表示されている版が最新かどうかを、この番号で確認できる。
-const APP_VERSION = 'v1.13.0';
+const APP_VERSION = 'v1.14.0';
 
 const PREVIEW_MAX_SIDE = 420;
 
