@@ -10,6 +10,7 @@ const all={
   '6682(斜めに置いた)':`${S}/IMG_6682.jpeg`,
   '6706(ホーム画面・白机)':`${S}/IMG_6706.jpeg`,
   '7003(水色ケース・暗い机)':`${S}/IMG_7003.jpeg`,
+  '7448(黒ケース・明るい机・斜め)':`${S}/IMG_7448.jpeg`,
 };
 // 手元に無い写真は飛ばす。ただし何を見ていないかは必ず表に出す。
 const photos=Object.fromEntries(Object.entries(all).filter(([,f])=>fs.existsSync(f)));

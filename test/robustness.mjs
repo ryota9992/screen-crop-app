@@ -5,8 +5,8 @@ const b=await chromium.launch({executablePath: process.env.CHROME_PATH || undefi
 const p=await b.newPage(); p.on('pageerror',e=>console.log('[err]',e.message));
 await p.setContent('<body></body>'); await p.addScriptTag({content:lib});
 const S=process.env.TEST_DIR||'./test/data';
-const names=['IMG_6407','IMG_6681','IMG_6682','IMG_6706','IMG_7003'].filter(n=>fs.existsSync(`${S}/${n}.jpeg`));
-const skipped=['IMG_6407','IMG_6681','IMG_6682','IMG_6706','IMG_7003'].filter(n=>!names.includes(n));
+const names=['IMG_6407','IMG_6681','IMG_6682','IMG_6706','IMG_7003','IMG_7448'].filter(n=>fs.existsSync(`${S}/${n}.jpeg`));
+const skipped=['IMG_6407','IMG_6681','IMG_6682','IMG_6706','IMG_7003','IMG_7448'].filter(n=>!names.includes(n));
 if(skipped.length) console.log(`[未実行] ${skipped.join(', ')} が ${S} に無い`);
 for(const n of names){
   const u='data:image/jpeg;base64,'+fs.readFileSync(`${S}/${n}.jpeg`).toString('base64');
