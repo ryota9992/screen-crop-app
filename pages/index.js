@@ -13,9 +13,23 @@ import {
 
 // 画面に表示するバージョン。変更をデプロイするたびに上げること。
 // 表示されている版が最新かどうかを、この番号で確認できる。
-const APP_VERSION = 'v1.14.0';
+const APP_VERSION = 'v1.14.1';
 
 const PREVIEW_MAX_SIDE = 420;
+
+// ファイル入力を見えなくするための指定。
+// display:none や visibility:hidden にすると、iOS ではタップしても写真の選択
+// 画面が開かないことがある。描画はさせたまま、面積をほぼ 0 にして透明にする。
+const HIDDEN_INPUT_STYLE = {
+  position: 'absolute',
+  left: 0,
+  top: 0,
+  width: 1,
+  height: 1,
+  opacity: 0,
+  padding: 0,
+  border: 0,
+};
 
 
 /** 切り出し結果のファイル名 */
@@ -391,14 +405,14 @@ export default function CropPage() {
             </p>
           </div>
 
-          <label className="block bg-white border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-400 mb-6">
+          <label className="relative block bg-white border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-400 mb-6">
             <input
               type="file"
               accept="image/*"
               multiple
               onChange={handleFiles}
-              className="hidden"
               disabled={processing}
+              style={HIDDEN_INPUT_STYLE}
             />
             <p className="text-gray-700 font-medium">
               {processing
