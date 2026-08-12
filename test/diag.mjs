@@ -33,6 +33,35 @@ const out = await page.evaluate(async (u) => {
   const body = detectDeviceBody(base);
   info.本体検出 = body ? body.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(' / ') : 'なし（画面経路）';
 
+  // どんな明るい領域が見つかり、どれが画面の候補として使われたか
+  {
+    const { canvas: small } = downscale(base, 640);
+    const sctx = small.getContext('2d', { willReadFrequently: true });
+    const luma = toLuma(sctx.getImageData(0, 0, small.width, small.height));
+    const th = otsuThreshold(luma);
+    const mask = new Uint8Array(luma.length);
+    for (let i = 0; i < luma.length; i++) mask[i] = luma[i] > th ? 1 : 0;
+    const maxSide = Math.max(small.width, small.height);
+    const raw = findComponents(mask, luma, small.width, small.height, small.width * small.height * 0.004);
+    const box = (c) => {
+      let a = 1e9, b = 1e9, x2 = -1e9, y2 = -1e9;
+      for (const p of c.points) {
+        a = Math.min(a, p.x); x2 = Math.max(x2, p.x);
+        b = Math.min(b, p.y); y2 = Math.max(y2, p.y);
+      }
+      return `${a},${b}-${x2},${y2}`;
+    };
+    info.解析サイズ = `${small.width}x${small.height}`;
+    info.二値化しきい値 = th;
+    info.成分 = raw.map((c) => ({
+      位置: box(c),
+      面積: c.area,
+      輝度: Math.round(c.meanLuma),
+      端に接する: c.touchesBorder,
+      縁と判定: isThinRim(c, maxSide),
+    }));
+  }
+
   const quad = detectScreenQuad(base);
   if (!quad) return { ...info, 結果: '検出失敗' };
   info.四隅 = quad.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(' / ');
